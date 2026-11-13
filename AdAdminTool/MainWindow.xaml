@@ -1,0 +1,344 @@
+﻿<Window x:Class="AdAdminTool.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="AD Admin Tool" Height="720" Width="1280"
+        MinHeight="480" MinWidth="900"
+        FontFamily="Segoe UI" FontSize="13">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="AccentBrush"  Color="#2563EB"/>
+        <SolidColorBrush x:Key="PanelBgBrush" Color="#F8FAFC"/>
+        <SolidColorBrush x:Key="BorderLight"  Color="#E2E8F0"/>
+        <SolidColorBrush x:Key="HeaderBg"     Color="#1E293B"/>
+        <SolidColorBrush x:Key="HeaderFg"     Color="#E2E8F0"/>
+        <SolidColorBrush x:Key="SubtleFg"     Color="#64748B"/>
+        <SolidColorBrush x:Key="ConsoleBg"    Color="#0F172A"/>
+        <SolidColorBrush x:Key="ConsoleFg"    Color="#CBD5E1"/>
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1D4ED8"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#94A3B8"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="PanelHeader" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource HeaderBg}"/>
+            <Setter Property="Padding" Value="12,8"/>
+        </Style>
+        <Style x:Key="PanelHeaderText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource HeaderFg}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style x:Key="PanelBody" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource PanelBgBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderLight}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <DataTemplate x:Key="InfoRowTemplate">
+            <Grid Margin="0,2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox Text="{Binding Label}"
+                 IsReadOnly="True"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Disabled"
+                 BorderThickness="0"
+                 Background="Transparent"
+                 Foreground="{StaticResource SubtleFg}"
+                 Padding="0"
+                 IsTabStop="False"/>
+
+                <TextBox Grid.Column="1"
+                 Text="{Binding Value}"
+                 IsReadOnly="True"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Disabled"
+                 BorderThickness="0"
+                 Background="Transparent"
+                 Padding="0"
+                 IsTabStop="False"/>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ComputerItemTemplate">
+            <Grid Margin="6,5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Ellipse Width="10" Height="10" VerticalAlignment="Center">
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Setter Property="Fill" Value="#94A3B8"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Computer.IsOnline}" Value="True">
+                                    <Setter Property="Fill" Value="#22C55E"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                    <TextBlock Text="{Binding DisplayTitle}"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Subtitle}"
+                               FontSize="11"
+                               Foreground="{StaticResource SubtleFg}"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320" MinWidth="240"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="*" MinWidth="500"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ЛЕВАЯ ПАНЕЛЬ -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Style="{StaticResource PanelHeader}">
+                <TextBlock Text="Пользователи / Компьютеры" Style="{StaticResource PanelHeaderText}"/>
+            </Border>
+
+            <Border Grid.Row="1"
+                    Background="White"
+                    BorderBrush="{StaticResource BorderLight}"
+                    BorderThickness="0,0,0,1"
+                    Padding="8">
+                <Grid>
+                    <TextBox x:Name="SearchBox"
+                             Padding="6,5"
+                             BorderBrush="{StaticResource BorderLight}"
+                             BorderThickness="1"
+                             TextChanged="SearchBox_TextChanged"/>
+                    <TextBlock Text="Поиск по имени, логину или ПК..."
+                               IsHitTestVisible="False"
+                               Margin="10,0,0,0"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource SubtleFg}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Border>
+
+            <ListBox Grid.Row="2"
+                     x:Name="ComputersList"
+                     BorderThickness="0"
+                     Background="White"
+                     HorizontalContentAlignment="Stretch"
+                     ItemTemplate="{StaticResource ComputerItemTemplate}"
+                     SelectionChanged="ComputersList_SelectionChanged"/>
+
+            <Border Grid.Row="3"
+                    Background="White"
+                    BorderBrush="{StaticResource BorderLight}"
+                    BorderThickness="0,1,0,0"
+                    Padding="10">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse x:Name="StatusDot" Width="10" Height="10"
+                                 Fill="#94A3B8" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="StatusLabel"
+                                   Text="не выбран"
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center"
+                                   FontWeight="SemiBold"/>
+                    </StackPanel>
+                    <Button x:Name="VncButton"
+                            Content="Подключиться (VNC)"
+                            Style="{StaticResource PrimaryButton}"
+                            Margin="0,10,0,0"
+                            IsEnabled="False"
+                            Click="VncButton_Click"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <GridSplitter Grid.Column="1"
+                      HorizontalAlignment="Stretch"
+                      Background="{StaticResource BorderLight}"/>
+
+
+        <!-- ПРАВАЯ ЧАСТЬ -->
+        <Grid Grid.Column="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="400"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="320" MinWidth="200"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ШИРОКАЯ КОЛОНКА: Дополнительно + Консоль -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" MinHeight="220"/>
+                    <RowDefinition Height="5"/>
+                    <RowDefinition Height="240" MinHeight="120"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Column="2" Style="{StaticResource PanelBody}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Style="{StaticResource PanelHeader}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Дополнительно"
+                   Style="{StaticResource PanelHeaderText}"/>
+                                <Button Grid.Column="1"
+                Content="Обновить скриншот"
+                Padding="8,3" FontSize="11"
+                Click="RefreshScreenshot_Click"/>
+                            </Grid>
+                        </Border >
+
+                        <Image Panel.ZIndex="2" Grid.Row="1"
+                               x:Name="ScreenshotImage"
+                               Stretch="Uniform"
+                               StretchDirection="DownOnly"/>
+                        <Image Panel.ZIndex="1" Grid.Row="1"
+                               StretchDirection="DownOnly" Source="/Resurse/916823.png"
+                               Opacity="0.5"
+                               Stretch="Uniform"/>
+                    </Grid>
+                </Border>
+
+                <GridSplitter Grid.Row="1"
+                      HorizontalAlignment="Stretch"
+                      Background="{StaticResource BorderLight}"/>
+
+                <Border Grid.Row="2" Style="{StaticResource PanelBody}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Style="{StaticResource PanelHeader}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Консоль PsExec"
+                                   Style="{StaticResource PanelHeaderText}"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Content="Очистить"
+                                    Padding="8,3" FontSize="11"
+                                    Click="ClearConsole_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <TextBox x:Name="ConsoleOutput"
+                         Grid.Row="1"
+                         IsReadOnly="True"
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto"
+                         FontFamily="Consolas"
+                         FontSize="12"
+                         Background="{StaticResource ConsoleBg}"
+                         Foreground="{StaticResource ConsoleFg}"
+                         BorderThickness="0"
+                         Padding="10"
+                         TextWrapping="NoWrap"/>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <GridSplitter Grid.Column="1"
+                  HorizontalAlignment="Stretch"
+                  Background="{StaticResource BorderLight}"/>
+
+            <!-- УЗКАЯ КОЛОНКА: Информация -->
+            <Border Grid.Column="2" Style="{StaticResource PanelBody}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Style="{StaticResource PanelHeader}">
+                        <TextBlock Text="Информация"
+                           Style="{StaticResource PanelHeaderText}"/>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="12">
+                            <TextBlock Text="О пользователе"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource SubtleFg}"
+                               Margin="0,0,0,6"/>
+                            <ItemsControl x:Name="UserInfoItems"
+                                  ItemTemplate="{StaticResource InfoRowTemplate}"/>
+
+                            <Separator Margin="0,14"
+                               Background="{StaticResource BorderLight}"/>
+
+                            <TextBlock Text="О ПК"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource SubtleFg}"
+                               Margin="0,0,0,6"/>
+                            <ItemsControl x:Name="PcInfoItems"
+                                  ItemTemplate="{StaticResource InfoRowTemplate}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
