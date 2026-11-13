@@ -81,6 +81,7 @@ public class PsExecService
         return (process.ExitCode, stdout.ToString(), stderr.ToString());
     }
 
+
     public async Task<SystemInfo> CollectAsync(
         string? host,
         Action<string>? log = null,
@@ -256,9 +257,6 @@ public class PsExecService
             var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 3) continue;
 
-            // ID сессии — единственное целое поле в строке (столбец ID).
-            // Заголовок сюда тоже попадёт, но у него "ID" — не число,
-            // поэтому благополучно проскочим.
             for (int i = 1; i < parts.Length; i++)
             {
                 if (int.TryParse(parts[i], out var sid) && sid > 0)
@@ -350,6 +348,94 @@ $g.Dispose(); $bmp.Dispose()
 
         return null;
     }
+
+
+    public async Task<string?> GetIdleTimeAsync(
+        string? host, string sessionId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(sessionId))
+            return null;
+
+        var remoteHost = host.TrimStart('\\');
+        var fileName = $"idle_{Guid.NewGuid():N}.txt";
+        var remotePath = $@"C:\Windows\Temp\{fileName}";
+
+        // PowerShell-скрипт: считает idle и пишет результат в файл
+        var psScript = $@"
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class IdleCheck {{
+    [StructLayout(LayoutKind.Sequential)]
+    public struct LASTINPUTINFO {{ public uint cbSize; public uint dwTime; }}
+    [DllImport(""user32.dll"")]
+    public static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+    public static uint GetIdleMs() {{
+        LASTINPUTINFO lii = new LASTINPUTINFO();
+        lii.cbSize = (uint)Marshal.SizeOf(typeof(LASTINPUTINFO));
+        if (!GetLastInputInfo(ref lii)) return 0;
+        return ((uint)Environment.TickCount - lii.dwTime);
+    }}
+}}
+'@
+[IdleCheck]::GetIdleMs() | Out-File -FilePath '{remotePath}' -Encoding ascii
+";
+
+        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(psScript));
+
+        // Ключ -s добавлен: SYSTEM имеет лучший доступ к сессиям пользователей.
+        var arguments = $"-accepteula -nobanner -s -i {sessionId} \\\\{remoteHost} " +
+                        $"powershell.exe -NoProfile -EncodedCommand {encoded}";
+
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = _psExecPath,
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
+            };
+
+            using var process = new Process { StartInfo = psi };
+            process.Start();
+            await process.WaitForExitAsync(ct); // stdout нам больше не нужен
+
+            // Копируем файл с удалённой машины
+            var uncPath = $@"\\{remoteHost}\C$\Windows\Temp\{fileName}";
+            var localPath = Path.Combine(Path.GetTempPath(), fileName);
+
+            for (int i = 0; i < 10; i++) // ждём появления файла
+            {
+                if (File.Exists(uncPath))
+                {
+                    File.Copy(uncPath, localPath, overwrite: true);
+                    try { File.Delete(uncPath); } catch { } // чистим за собой
+
+                    var text = (await File.ReadAllTextAsync(localPath, ct)).Trim();
+                    File.Delete(localPath);
+
+                    if (long.TryParse(text, out _))
+                        return text; // вернули миллисекунды
+                }
+                await Task.Delay(300, ct);
+            }
+
+            LastError = "Файл с результатом не появился на удалённой машине.";
+            return null;
+        }
+        catch (Exception ex)
+        {
+            LastError = $"{ex.GetType().Name}: {ex.Message}";
+            return null;
+        }
+    }
+
+    public string? LastError { get; private set; }
 
     private static long ParseLong(string s) =>
         long.TryParse(s, out var v) ? v : 0;

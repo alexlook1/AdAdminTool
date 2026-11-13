@@ -226,6 +226,9 @@ public partial class MainWindow : Window
 
     // ====== Выбор ПК ======
 
+
+
+
     private async void ComputersList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (ComputersList.SelectedItem is not ComputerView cv)
@@ -256,7 +259,40 @@ public partial class MainWindow : Window
                 cv.Computer.DnsHostName,
                 msg => Dispatcher.Invoke(() => Log(msg)));
 
+            // AFK через GetLastInputInfo в сессии пользователя
+            if (!string.IsNullOrWhiteSpace(sysInfo.SessionId))
+            {
+                Log($"[AFK] Запрос idle time (сессия {sysInfo.SessionId})...");
+                var idleMs = await _psExec.GetIdleTimeAsync(
+                    cv.Computer.DnsHostName, sysInfo.SessionId);
+
+                if (idleMs != null)
+                {
+                    sysInfo.IdleTimeMs = idleMs;
+                    Log($"[AFK] idle = {idleMs} ms");
+                }
+                else
+                {
+                    Log("[AFK] GetIdleTimeAsync вернул null");
+                }
+            }
+            else
+            {
+                Log("[AFK] нет SessionId — пропуск");
+            }
+
             FillPcInfoAdvanced(cv.Computer, sysInfo);
+
+            if (!string.IsNullOrWhiteSpace(sysInfo.SessionId))
+            {
+                var idleMs = await _psExec.GetIdleTimeAsync(
+                    cv.Computer.DnsHostName, sysInfo.SessionId);
+
+                if (idleMs != null)
+                    sysInfo.IdleTimeMs = idleMs;
+            }
+
+
 
             // 3. Если первичный quser не нашёл сессию, а CollectAsync нашёл — попробуем ещё раз
             if (ScreenshotImage.Source is null && !string.IsNullOrWhiteSpace(sysInfo.SessionId))
@@ -267,6 +303,7 @@ public partial class MainWindow : Window
                     Dispatcher.Invoke(() => LoadScreenshot(path));
             }
 
+
             Log($"[PsExec] Готово: {cv.Computer.Name}");
         }
         catch (Exception ex)
@@ -274,6 +311,30 @@ public partial class MainWindow : Window
             Log($"[PsExec] Ошибка: {ex.GetType().Name}: {ex.Message}");
         }
     }
+
+    // Порог, после которого считаем пользователя AFK (в минутах).
+    private const int AfkThresholdMinutes = 5;
+
+    private static string FormatAfkMs(string idleMsRaw)
+    {
+        if (!long.TryParse(idleMsRaw, out var idleMs) || idleMs < 0)
+            return "н/д";
+
+        var totalMin = (int)(idleMs / 60000);
+        var d = totalMin / (24 * 60); totalMin %= 24 * 60;
+        var h = totalMin / 60; var m = totalMin % 60;
+
+        var parts = new List<string>();
+        if (d > 0) parts.Add($"{d}д");
+        if (h > 0) parts.Add($"{h}ч");
+        if (m > 0 || parts.Count == 0) parts.Add($"{m}м");
+        var timeStr = string.Join(" ", parts);
+
+        return totalMin >= AfkThresholdMinutes
+            ? $"Да ({timeStr})"
+            : $"Нет ({timeStr})";
+    }
+
 
     // ====== Заполнение панелей ======
 
@@ -301,6 +362,7 @@ public partial class MainWindow : Window
         AddPcInfo("Имя", pc.Name);
         AddPcInfo("DNS-имя", pc.DnsHostName);
         AddPcInfo("Статус", pc.IsOnline ? "Онлайн" : "Офлайн");
+        AddPcInfo("AFK", FormatAfkMs(si.IdleTimeMs));
 
         // --- Дополнение из PsExec ---
         // ОС: если PsExec вернул пусто (частичный сбор) — оставляем значение из AD.

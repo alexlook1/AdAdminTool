@@ -23,7 +23,5 @@ public class SystemInfo
     public string Domain { get; set; } = "";
     public string LoggedUser { get; set; } = "";
     public string SessionId { get; set; } = "";
-    public string IdleTime { get; set; } = "";
-
-    public bool HasAnyData => !string.IsNullOrEmpty(OsName) || !string.IsNullOrEmpty(CpuName);
+    public string IdleTimeMs { get; set; } = "";
 }
