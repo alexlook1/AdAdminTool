@@ -53,7 +53,7 @@ AdAdminTool/
 - [.NET 10 SDK](https://dotnet.microsoft.com/download) для сборки;
 - [PsExec](https://learn.microsoft.com/sysinternals/downloads/psexec) (Sysinternals);
 - VNC-сервер на целевых машинах (для подключения по VNC) и VNC Viewer (например, TightVNC/UltraVNC) — опционально;
-- Учётная запись администратора домена (или с правами на чтение AD и удалённое выполнение ADMIN$).
+- Приложение авторизуется в AD автоматически под учётной записью, под которой выполнен вход в Windows (Kerberos/NTLM, без пароля в конфиге). Права на чтение AD и удалённое выполнение ADMIN$ берутся от этой учётной записи.
 
 ## Конфигурация
 
@@ -63,8 +63,6 @@ AdAdminTool/
 {
   "DcHost": "dc01.contoso.local",
   "Domain": "contoso.local",
-  "Username": "CONTOSO\\admin",
-  "Password": "********",
   "BaseDn": "DC=contoso,DC=local",
   "PsExecPath": "C:\\Tools\\psexec.exe",
   "VncViewerPath": "C:\\Tools\\vncviewer.exe",
@@ -77,7 +75,6 @@ AdAdminTool/
 |---|---|
 | `DcHost` | Хост/имя контроллера домена для LDAP-запросов |
 | `Domain` | Имя домена |
-| `Username` / `Password` | Учётные данные для входа в AD и удалённого выполнения |
 | `BaseDn` | Базовый DN поиска (например, `DC=contoso,DC=local`) |
 | `PsExecPath` | Полный путь к `psexec.exe` |
 | `VncViewerPath` | Путь к исполняемому файлу VNC Viewer |

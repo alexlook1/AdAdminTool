@@ -7,8 +7,6 @@ public class AdConfig
 {
     public string DcHost { get; set; } = "";
     public string Domain { get; set; } = "";
-    public string Username { get; set; } = "";
-    public string Password { get; set; } = "";
     public string BaseDn { get; set; } = "";
 
     public string PsExecPath { get; set; } = "";
