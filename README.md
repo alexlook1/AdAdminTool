@@ -39,6 +39,8 @@ AdAdminTool/
 ├── Services/
 │   ├── AdConfig.cs               — конфигурация (чтение appsettings.json)
 │   ├── AdService.cs              — запросы к Active Directory (LDAP)
+│   ├── AuthService.cs            — авторизация в приложении под пользователем,
+│   │                               выполненным вход в систему (через AD)
 │   ├── ConnectivityService.cs    — проверка доступности хостов (ping / TCP 445)
 │   └── PsExecService.cs          — удалённое выполнение команд, сбор systeminfo,
 │                                   снимок экрана, активная сессия, idle time
