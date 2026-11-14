@@ -15,6 +15,7 @@ public partial class MainWindow : Window
 {
     private readonly AdConfig _cfg;
     private readonly AdService _ad;
+    private readonly AuthService _auth;
     private readonly ConnectivityService _connectivity = new();
     private readonly PsExecService _psExec;
 
@@ -33,6 +34,7 @@ public partial class MainWindow : Window
 
         _cfg = AdConfig.Load();
         _ad = new AdService(_cfg);
+        _auth = new AuthService(_cfg);
 
         if (string.IsNullOrWhiteSpace(_cfg.PsExecPath))
             throw new InvalidOperationException("В appsettings.json не задан PsExecPath.");
@@ -42,6 +44,57 @@ public partial class MainWindow : Window
         Loaded += MainWindow_Loaded;
 
 
+    }
+
+    // ====== Авторизация по AD под текущим пользователем Windows ======
+
+    /// <summary>
+    /// Авторизует в приложении пользователя, под которым выполнен вход в систему,
+    /// сверяя его с Active Directory. Результат отображается на верхней панели.
+    /// </summary>
+    private bool AuthorizeCurrentUser()
+    {
+        var login = AuthService.CurrentLogin;
+
+        // Сразу показываем имя учётной записи входа в Windows.
+        CurrentUserNameText.Text = login;
+
+        try
+        {
+            Log($"[Auth] Авторизация в AD под пользователем {login}...");
+            if (_auth.AuthenticateCurrentUser(out var error))
+            {
+                var display = !string.IsNullOrWhiteSpace(_auth.DisplayName)
+                    ? $"{_auth.DisplayName} ({login})"
+                    : login;
+                CurrentUserNameText.Text = display;
+                AuthStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
+                Log($"[Auth] Успешно: {display}");
+                if (!string.IsNullOrWhiteSpace(_auth.DistinguishedName))
+                    Log($"[Auth] DN: {_auth.DistinguishedName}");
+                return true;
+            }
+
+            AuthStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
+            Log($"[Auth] Отказано: {error}");
+            MessageBox.Show(
+                $"Не удалось выполнить авторизацию в Active Directory.\n\n{error}\n\nПриложение будет закрыто.",
+                "Ошибка авторизации",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            AuthStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
+            Log($"[Auth] Ошибка: {ex.GetType().Name}: {ex.Message}");
+            MessageBox.Show(
+                $"Ошибка авторизации: {ex.Message}",
+                "Ошибка авторизации",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            return false;
+        }
     }
 
     // ====== Старт ======
@@ -110,6 +163,14 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        // Авторизация под пользователем, выполненным вход в систему (через AD).
+        // Без успешной авторизации работа приложения невозможна.
+        if (!AuthorizeCurrentUser())
+        {
+            Close();
+            return;
+        }
+
         if (!File.Exists(_cfg.PsExecPath))
             Log($"[!] PsExec не найден: {_cfg.PsExecPath} — сбор информации работать не будет.");
         if (!string.IsNullOrWhiteSpace(_cfg.VncViewerPath) && !File.Exists(_cfg.VncViewerPath))
