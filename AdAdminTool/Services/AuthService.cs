@@ -117,6 +117,9 @@ public class AuthService
     /// </summary>
     private bool IsMemberOfAdminGroup(out string error)
     {
+        // Инициализируем out-параметр сразу — компилятор требует, чтобы «error»
+        // имел значение на ВСЕХ путях выхода из метода (CS0177).
+        error = "";
         var groupName = _cfg.EffectiveAdminGroupName;
 
         // Находим группу в AD — получаем её SID и DN.
