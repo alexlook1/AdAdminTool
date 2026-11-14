@@ -42,15 +42,15 @@ public partial class MainWindow : Window
         _psExec = new PsExecService(_cfg.PsExecPath);
 
         Loaded += MainWindow_Loaded;
-
-
     }
 
     // ====== Авторизация по AD под текущим пользователем Windows ======
 
     /// <summary>
     /// Авторизует в приложении пользователя, под которым выполнен вход в систему,
-    /// сверяя его с Active Directory. Результат отображается на верхней панели.
+    /// сверяя его с Active Directory и проверяя членство в группе администраторов
+    /// приложения (ConnectME_Admins, включая вложенные группы).
+    /// Результат отображается на верхней панели.
     /// </summary>
     private bool AuthorizeCurrentUser()
     {
@@ -72,14 +72,18 @@ public partial class MainWindow : Window
                 Log($"[Auth] Успешно: {display}");
                 if (!string.IsNullOrWhiteSpace(_auth.DistinguishedName))
                     Log($"[Auth] DN: {_auth.DistinguishedName}");
+                Log($"[Auth] Доступ разрешён: член группы \"{_cfg.EffectiveAdminGroupName}\".");
                 return true;
             }
 
             AuthStatusDot.Fill = new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44));
             Log($"[Auth] Отказано: {error}");
+
+            // Отдельное уведомление для случая «не администратор» —
+            // текст ошибки уже сформирован AuthService.
             MessageBox.Show(
-                $"Не удалось выполнить авторизацию в Active Directory.\n\n{error}\n\nПриложение будет закрыто.",
-                "Ошибка авторизации",
+                $"{error}\n\nПриложение будет закрыто.",
+                "Доступ запрещён",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
             return false;
