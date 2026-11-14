@@ -121,24 +121,33 @@ public class AuthService
 
         // Находим группу в AD — получаем её SID и DN.
         string? groupSid = null;
-        using (var groupEntry = FindGroupEntry(groupName))
+        try
         {
-            if (groupEntry != null)
+            using (var groupEntry = FindGroupEntry(groupName))
             {
-                try
+                if (groupEntry != null)
                 {
-                    var sidBytes = groupEntry.Properties["objectSid"][0] as byte[];
-                    if (sidBytes is { Length: > 0 })
-                        groupSid = new SecurityIdentifier(sidBytes, 0).Value;
+                    try
+                    {
+                        var sidBytes = groupEntry.Properties["objectSid"][0] as byte[];
+                        if (sidBytes is { Length: > 0 })
+                            groupSid = new SecurityIdentifier(sidBytes, 0).Value;
 
-                    AdminGroupDn = groupEntry.Properties.Contains("distinguishedName")
-                        ? groupEntry.Properties["distinguishedName"][0]?.ToString()
-                        : groupEntry.Path;
+                        AdminGroupDn = groupEntry.Properties.Contains("distinguishedName")
+                            ? groupEntry.Properties["distinguishedName"][0]?.ToString()
+                            : groupEntry.Path;
+                    }
+                    catch { /* свойства читаем по возможности */ }
+
+                    AdminGroupSid = groupSid;
                 }
-                catch { /* свойства читаем по возможности */ }
-
-                AdminGroupSid = groupSid;
             }
+        }
+        catch (Exception ex)
+        {
+            error = $"Ошибка поиска группы администраторов \"{groupName}\" в Active Directory: " +
+                    $"{ex.GetType().Name}: {ex.Message}";
+            return false;
         }
 
         if (groupSid == null)
