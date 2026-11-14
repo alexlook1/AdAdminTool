@@ -11,6 +11,16 @@ public class AdConfig
 
     public string PsExecPath { get; set; } = "";
 
+    /// <summary>
+    /// Имя группы безопасности в AD, члены которой (включая вложенные группы)
+    /// получают доступ к приложению. Пустое значение => "ConnectME_Admins".
+    /// </summary>
+    public string AdminGroupName { get; set; } = "";
+
+    /// <summary>Группа администраторов приложения с учётом значения по умолчанию.</summary>
+    public string EffectiveAdminGroupName =>
+        string.IsNullOrWhiteSpace(AdminGroupName) ? "ConnectME_Admins" : AdminGroupName.Trim();
+
     public string VncViewerPath { get; set; } = "";
     public int VncPort { get; set; } = 5900;
     public string VncPassword { get; set; } = "";

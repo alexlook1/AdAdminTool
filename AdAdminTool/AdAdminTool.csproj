@@ -14,6 +14,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="System.DirectoryServices" Version="11.0.0" />
+		<!-- Используется AuthService для рекурсивной проверки членства
+		     пользователя в группе ConnectME_Admins (GroupPrincipal.GetMembers). -->
+		<PackageReference Include="System.DirectoryServices.AccountManagement" Version="8.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
