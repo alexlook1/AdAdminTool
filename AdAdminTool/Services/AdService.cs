@@ -11,11 +11,9 @@ public class AdService
     private DirectoryEntry CreateRoot()
     {
         var path = $"LDAP://{_cfg.DcHost}/{_cfg.BaseDn}";
-        return new DirectoryEntry(
-            path,
-            _cfg.Username,
-            _cfg.Password,
-            AuthenticationTypes.Secure);
+        // Пустые логин/пароль => привязка к AD с текущим токеном Windows
+        // (Kerberos/NTLM вошедшего пользователя), без явных учётных данных.
+        return new DirectoryEntry(path, null, null, AuthenticationTypes.Secure);
     }
 
     public List<AdComputer> GetComputers()
